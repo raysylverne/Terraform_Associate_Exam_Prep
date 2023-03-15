@@ -30,3 +30,25 @@ To deploy the architecture, follow these steps:
 3. Run `terraform init` to initialize the Terraform configuration.
 4. Run `terraform plan` to see the changes that will be made.
 5. Run `terraform apply` to apply the changes and deploy the architecture.
+
+# HashiCorp Configuration Language Breakdown
+
+```
+<BLOCK TYPE> "<BLOCK LABEL>" "<BLOCK LABEL>" {
+    # Block body
+    <IDENTIFIER> = <EXPRESSION> # Argument
+}
+
+```
+
+## AWS EC2 Example
+
+```
+resource "aws_instance" "web_server" {
+  ami = "ami-04d29b6f966df1537"
+  instance_type = var.instance_type
+}
+
+```
+
+This is a template for a block in Terraform configuration files. The example provided shows the configuration for an AWS EC2 instance resource. The `aws_instance` resource creates an EC2 instance in the specified AWS region.
