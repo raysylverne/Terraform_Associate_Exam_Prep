@@ -1,6 +1,9 @@
 # Deploying a Two-Tier Architecture in AWS using Terraform
 
 This repository contains the code for deploying a basic two-tier architecture in AWS using Terraform.
+![Screenshot 2023-03-15 at 3 56 14 PM](https://user-images.githubusercontent.com/111945210/225427715-579224dd-07ea-49a3-9887-8f3833fc8231.png)
+
+
 
 ## Architecture Overview
 
