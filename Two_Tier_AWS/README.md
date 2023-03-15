@@ -44,9 +44,9 @@ To deploy the architecture, follow these steps:
 ## AWS EC2 Example
 
 ```
-resource "aws_instance" "web_server" {
-  ami = "ami-04d29b6f966df1537"
-  instance_type = var.instance_type
+resource "aws_instance" "web_server" { # Block
+  ami = "ami-04d29b6f966df1537"    # Argument
+  instance_type = var.instance_type   # Argument being called from a variable.tf
 }
 
 ```
