@@ -131,11 +131,24 @@ data "aws_ami" "ubuntu" {
 }
 
 # Terraform Resource Block - To Build EC2 instance in Public Subnet
-resource "aws_instance" "web_server" {
+resource "aws_instance" "ubuntu_web_server" {
   ami           = data.aws_ami.ubuntu.id
   instance_type = "t2.micro"
   subnet_id     = aws_subnet.public_subnets["public_subnet_1"].id
   tags = {
     Name = "Ubuntu EC2 Server"
+  }
+}
+
+
+resource "aws_instance" "linux_web_server" {
+  ami           = "ami-09cd747c78a9add63"
+  instance_type = "t2.micro"
+
+  subnet_id              = aws_subnet.public_subnets["public_subnet_2"].id
+  vpc_security_group_ids = ["sg-034a4fa9b8b2f92f8"]
+
+  tags = {
+    "Terraform" = True
   }
 }
