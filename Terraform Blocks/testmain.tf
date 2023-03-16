@@ -7,6 +7,12 @@ provider "aws" {
 data "aws_availability_zones" "available" {}
 data "aws_region" "current" {}
 
+locals {
+  team = "api_mgmt_dev"
+  applicatoin = "corp_api"
+  server_name = "ec2-"
+}
+
 #Define the VPC 
 resource "aws_vpc" "demo_vpc" {
   cidr_block = var.vpc_cidr
