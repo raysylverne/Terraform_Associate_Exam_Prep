@@ -8,7 +8,7 @@ data "aws_availability_zones" "available" {}
 data "aws_region" "current" {}
 
 #Define the VPC 
-resource "aws_vpc" "vpc" {
+resource "aws_vpc" "demo_vpc" {
   cidr_block = var.vpc_cidr
 
   tags = {
@@ -21,7 +21,7 @@ resource "aws_vpc" "vpc" {
 #Deploy the private subnets
 resource "aws_subnet" "private_subnets" {
   for_each          = var.private_subnets
-  vpc_id            = aws_vpc.vpc.id
+  vpc_id            = aws_vpc.demo_vpc.id
   cidr_block        = cidrsubnet(var.vpc_cidr, 8, each.value)
   availability_zone = tolist(data.aws_availability_zones.available.names)[each.value]
 
@@ -34,7 +34,7 @@ resource "aws_subnet" "private_subnets" {
 #Deploy the public subnets
 resource "aws_subnet" "public_subnets" {
   for_each                = var.public_subnets
-  vpc_id                  = aws_vpc.vpc.id
+  vpc_id                  = aws_vpc.demo_vpc.id
   cidr_block              = cidrsubnet(var.vpc_cidr, 8, each.value + 100)
   availability_zone       = tolist(data.aws_availability_zones.available.names)[each.value]
   map_public_ip_on_launch = true
@@ -47,7 +47,7 @@ resource "aws_subnet" "public_subnets" {
 
 #Create route tables for public and private subnets
 resource "aws_route_table" "public_route_table" {
-  vpc_id = aws_vpc.vpc.id
+  vpc_id = aws_vpc.demo_vpc.id
 
   route {
     cidr_block = "0.0.0.0/0"
@@ -61,7 +61,7 @@ resource "aws_route_table" "public_route_table" {
 }
 
 resource "aws_route_table" "private_route_table" {
-  vpc_id = aws_vpc.vpc.id
+  vpc_id = aws_vpc.demo_vpc.id
 
   route {
     cidr_block = "0.0.0.0/0"
@@ -91,7 +91,7 @@ resource "aws_route_table_association" "private" {
 
 #Create Internet Gateway
 resource "aws_internet_gateway" "internet_gateway" {
-  vpc_id = aws_vpc.vpc.id
+  vpc_id = aws_vpc.demo_vpc.id
   tags = {
     Name = "demo_igw"
   }
@@ -140,15 +140,20 @@ resource "aws_instance" "ubuntu_web_server" {
   }
 }
 
+resource "aws_s3_bucket" "my_new_s3_bucket" {
+    bucket = "my-new-tf-test-bucket-rayjs"
+    
+    tags = {
+        Name    = "My S3 Bucket"
+        Purpose = "Intro to Resource Buckets Block"
+    }
+}
 
-resource "aws_instance" "linux_web_server" {
-  ami           = "ami-09cd747c78a9add63"
-  instance_type = "t2.micro"
+resource "aws_s3_bucket_acl" "my_new_bucket_acl" {
+    bucket = aws_s3_bucket.my_new_s3_bucket.id
+    acl    = "private"
+}
 
-  subnet_id              = aws_subnet.public_subnets["public_subnet_2"].id
-  vpc_security_group_ids = ["sg-034a4fa9b8b2f92f8"]
-
-  tags = {
-    "Terraform" = True
-  }
+resource "" "name" {
+  
 }
