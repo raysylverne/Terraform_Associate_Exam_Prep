@@ -39,13 +39,20 @@ resource "random_id" "randomness" {
 byte_length = 16
 }
 
-resource "aws_subnet" "variables-subnet" {
-vpc_id = aws_vpc.vpc.id
-cidr_block = "10.0.250.0/24"
-availability_zone = "us-east-1a"
-map_public_ip_on_launch = true
-tags = {
-Name = "sub-variables-us-east-1a"
-Terraform = "true"
+variable "variables_sub_cidr" {
+  default     = "10.0.202.0/24"
+  description = "CIDR Block for the Variables Subnet"
+  type        = string
 }
+
+variable "variables_sub_az" {
+  default     = "us-east-1a"
+  description = "Availability Zone used Variables Subnet"
+  type        = string
+}
+
+variable "variables_sub_auto_ip" {
+  default     = true
+  description = "Set Automatic IP Assigment for Variables Subnet"
+  type        = bool
 }
