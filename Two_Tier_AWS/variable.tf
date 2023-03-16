@@ -46,3 +46,9 @@ variable "variables_sub_auto_ip" {
   description = "Set Automatic IP Assigment for Variables Subnet"
   type        = bool
 }
+
+variable "environment" {
+  description = "Environment for deployment"
+  type        = string
+  default     = "dev"
+}
