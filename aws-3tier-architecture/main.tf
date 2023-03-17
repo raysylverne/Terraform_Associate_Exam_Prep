@@ -55,7 +55,7 @@ module "security_group" {
 
 module "alb" {
   source          = "terraform-aws-modules/alb/aws"
-  version         = "4.2.0"
+  version           = "~> 8.0"
  load_balancer_name = "my-load-balancer"
   subnets         = module.vpc.public_subnets
   security_groups = [module.security_group.this_security_group_id]
