@@ -169,3 +169,15 @@ resource "aws_subnet" "variables-subnet" {
     Terraform = "true"
   }
 }
+
+# Generates a private key and encodes it in PEM (RFC 1421)
+resource "tls_private_key" "generated" {
+  algorithm = "RSA"
+}
+
+
+resource "local_file" "private_key_pem" {
+  content  = tls_private_key.generated.private_key_pem
+  filename = "MyASWKey.pem"
+
+}
