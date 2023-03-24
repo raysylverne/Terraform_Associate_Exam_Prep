@@ -284,13 +284,32 @@ resource "aws_security_group" "vpc-ping" {
   }
 }
 
-module "server" {
-  source          = "./server"
-  ami             = data.aws_ami.ubuntu.id
-subnet_id       = aws_subnet.public_subnets["public_subnet_3"].id
-security_groups = [
-  aws_security_group.vpc-ping.id,
-  aws_security_group.ingress-ssh.id,
-  aws_security_group.vpc-web.id
-]
+module "web_server_module" {
+  source    = "./server_module"
+  ami       = data.aws_ami.ubuntu.id
+  subnet_id = aws_subnet.public_subnets["public_subnet_3"].id
+  security_groups = [
+    aws_security_group.vpc-ping.id,
+    aws_security_group.ingress-ssh.id,
+    aws_security_group.vpc-web.id
+  ]
+}
+
+module "web_server_mod_sub1" {
+  source    = "./server_module"
+  ami       = data.aws_ami.ubuntu.id
+  subnet_id = aws_subnet.public_subnets["public_subnet_1"].id
+  security_groups = [
+    aws_security_group.vpc-ping.id,
+    aws_security_group.ingress-ssh.id,
+    aws_security_group.vpc-web.id
+  ]
+}
+
+output "public_ip" {
+  value = module.web_server_module.public_ip
+}
+
+output "public_dns" {
+  value = module.web_server_module.public_dns
 }
