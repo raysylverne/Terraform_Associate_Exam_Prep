@@ -316,7 +316,7 @@ output "public_dns" {
 }
 
 module "autoscaling" {
-  source  = "github.com/terraform-aws-modules/terraform-aws-autoscaling"
+  source = "github.com/terraform-aws-modules/terraform-aws-autoscaling"
 
   # Autoscaling group
   name = "myasg"
