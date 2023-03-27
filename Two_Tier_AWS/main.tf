@@ -287,6 +287,7 @@ resource "aws_security_group" "vpc-ping" {
 module "web_server_module" {
   source    = "./modules/server"
   ami       = data.aws_ami.ubuntu.id
+  size      = "t2.micro"
   subnet_id = aws_subnet.public_subnets["public_subnet_3"].id
   security_groups = [
     aws_security_group.vpc-ping.id,
@@ -313,6 +314,10 @@ output "public_ip" {
 
 output "public_dns" {
   value = module.web_server_module.public_dns
+}
+
+output "size" {
+  value = module.web_server_module.size
 }
 
 module "autoscaling" {
