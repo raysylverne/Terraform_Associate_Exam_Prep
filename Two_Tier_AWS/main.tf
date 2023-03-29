@@ -168,15 +168,6 @@ resource "aws_instance" "web_server" {                            # BLOCK
   }
 }
 
-resource "aws_instance" "web_server_2" {                          # BLOCK
-  ami           = data.aws_ami.ubuntu.id                          # Argument with data expression
-  instance_type = "t2.micro"                                      # Argument
-  subnet_id     = aws_subnet.public_subnets["public_subnet_1"].id # Argument with value as expression
-  tags = {
-    Name = "Web EC2 Server 2"
-  }
-}
-
 # Terraform Resource Block - To Build EC2 instance in Public Subnet
 resource "aws_instance" "ubuntu_server" {
   ami                         = data.aws_ami.ubuntu.id
@@ -205,7 +196,7 @@ resource "aws_instance" "ubuntu_server" {
     }
   }
 
-/*
+  /*
   # Interpolate local values into your existing code
   tags = {
     Name        = "Ubuntu EC2 Server"
@@ -213,11 +204,11 @@ resource "aws_instance" "ubuntu_server" {
     "AppTeam"   = local.app_team
     "CreatedBy" = local.createdby
   }
-*/  
+*/
 
-# Instead of naming each tag individually you can place them all into one block
-# and ref as a group. Now in the future instead of updating each resource manually you 
-# only need to update the local block being ref
+  # Instead of naming each tag individually you can place them all into one block
+  # and ref as a group. Now in the future instead of updating each resource manually you 
+  # only need to update the local block being ref
   tags = local.common_tags
   lifecycle {
     ignore_changes = [security_groups]
@@ -326,6 +317,7 @@ resource "aws_security_group" "vpc-ping" {
   }
 }
 
+/*
 module "web_server_module" {
   source    = "./modules/server"
   ami       = data.aws_ami.ubuntu.id
@@ -361,6 +353,7 @@ output "public_dns" {
 output "size" {
   value = module.web_server_module.size
 }
+*/
 
 # Create Resources Using Modules from GitHub Repo
 module "autoscaling" {
