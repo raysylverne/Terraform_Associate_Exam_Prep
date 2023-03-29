@@ -355,7 +355,7 @@ output "s3_bucket_name" {
   value = module.s3-bucket.s3_bucket_bucket_domain_name
 }
 
-/*
+
 # Create VPC Using Modules from Terraform Public Registry
 module "vpc" {
   source             = "terraform-aws-modules/vpc/aws"
@@ -373,4 +373,3 @@ module "vpc" {
     Environment = "dev"
   }
 }
-*/
