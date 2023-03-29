@@ -21,3 +21,8 @@ output "vpc_information" {
   value = "Your ${aws_vpc.demo_vpc.tags.Environment} VPC has an ID of ${aws_vpc
   .demo_vpc.id}"
 }
+
+output "public_ip" {
+  description = "Public IP for Web Server"
+  value       = aws_instance.web_server.public_ip
+}
