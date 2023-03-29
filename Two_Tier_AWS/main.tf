@@ -147,6 +147,15 @@ resource "aws_instance" "web_server" {                            # BLOCK
   }
 }
 
+resource "aws_instance" "web_server_2" {                          # BLOCK
+  ami           = data.aws_ami.ubuntu.id                          # Argument with data expression
+  instance_type = "t2.micro"                                      # Argument
+  subnet_id     = aws_subnet.public_subnets["public_subnet_1"].id # Argument with value as expression
+  tags = {
+    Name = "Web EC2 Server 2"
+  }
+}
+
 # Terraform Resource Block - To Build EC2 instance in Public Subnet
 resource "aws_instance" "ubuntu_server" {
   ami                         = data.aws_ami.ubuntu.id
