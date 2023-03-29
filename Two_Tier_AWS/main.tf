@@ -7,10 +7,31 @@ provider "aws" {
 data "aws_availability_zones" "available" {}
 data "aws_region" "current" {}
 
+# Create local values in a configuration block
+# that will be used to Interpolate local values into existing code
 locals {
   team        = "api_mgmt_dev"
-  applicatoin = "corp_api"
+  application = "corp_api"
   server_name = "ec2-${var.environment}-api-${var.variables_sub_az}"
+}
+
+# these will be added as tags for aws_instance.ubuntu_server
+locals {
+  service_name = "Automation"
+  app_team     = "Cloud Team"
+  createdby    = "terraform"
+}
+
+locals {
+  # Common tags to be assigned to all resources
+  common_tags = {
+    Name      = local.server_name
+    Owner     = local.team
+    App       = local.application
+    Service   = local.service_name
+    AppTeam   = local.app_team
+    CreatedBy = local.createdby
+  }
 }
 
 #Define the VPC 
@@ -183,9 +204,21 @@ resource "aws_instance" "ubuntu_server" {
       ]
     }
   }
+
+/*
+  # Interpolate local values into your existing code
   tags = {
-    Name = "Ubuntu EC2 Server"
+    Name        = "Ubuntu EC2 Server"
+    "Service"   = local.service_name
+    "AppTeam"   = local.app_team
+    "CreatedBy" = local.createdby
   }
+*/  
+
+# Instead of naming each tag individually you can place them all into one block
+# and ref as a group. Now in the future instead of updating each resource manually you 
+# only need to update the local block being ref
+  tags = local.common_tags
   lifecycle {
     ignore_changes = [security_groups]
   }
