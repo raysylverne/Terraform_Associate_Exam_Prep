@@ -7,6 +7,30 @@ provider "aws" {
 data "aws_availability_zones" "available" {}
 data "aws_region" "current" {}
 
+# query data from a bucket in AWS that is not managed by TF
+data "aws_s3_bucket" "data_bucket" {
+  bucket = "mystaticwebsite-rjs"
+}
+
+# creaet an IAM policy for bucket. Use string interprelation to ref Bucket ⬆️
+resource "aws_iam_policy" "policy" {
+  name        = "data_bucket_policy"
+  description = "Allow access to my bucket"
+  policy = jsonencode({
+    "Version" : "2012-10-17",
+    "Statement" : [
+      {
+        "Effect" : "Allow",
+        "Action" : [
+          "s3:Get*",
+          "s3:List*"
+        ],
+        "Resource" : "${data.aws_s3_bucket.data_bucket.arn}"
+      }
+    ]
+  })
+}
+
 # Create local values in a configuration block
 # that will be used to Interpolate local values into existing code
 locals {
@@ -182,9 +206,10 @@ resource "aws_instance" "ubuntu_server" {
     host        = self.public_ip
 
     # Leave the first part of the block unchanged and create our `local-exec` provisioner
-    provisioner "local-exec" {
+    /*provisioner "local-exec" {
       command = "chmod 600 ${local_file.private_key_pem.filename}"
     }
+    */
 
     # Create a remote-exec provisioner block to pull down web application
     provisioner "remote-exec" {
@@ -231,12 +256,12 @@ resource "tls_private_key" "generated" {
   algorithm = "RSA"
 }
 
-
+/*
 resource "local_file" "private_key_pem" {
   content  = tls_private_key.generated.private_key_pem
   filename = "MyASWKey.pem"
-
 }
+*/
 
 #  Create a key pair in AWS that is associated with ⬆ generated key
 resource "aws_key_pair" "generated" {
@@ -372,6 +397,24 @@ module "autoscaling" {
   instance_type = "t3.micro"
 }
 
+/*
+# ref list & map varible blocks var.ip & var.us-east-1-azs[0] to create subnet resource
+resource "aws_subnet" "list_subnet" {
+  for_each          = var.ip #  Iterate over a map to create multiple resources
+  vpc_id            = aws_vpc.demo_vpc.id
+  cidr_block        = each.value
+  availability_zone = var.us-east-1-azs[0]
+}
+*/
+
+# better option than ⬆️ is to ref a complex map varible where all the info is group together into on block
+resource "aws_subnet" "list_subnet" {
+  for_each          = var.env #  Iterate over a map to create multiple resources
+  vpc_id            = aws_vpc.demo_vpc.id
+  cidr_block        = each.value.ip # now that we have a map within a map our interation needs to go on layer deep buy adding (.ip) 
+  availability_zone = each.value.az # same as above 
+}
+
 output "asg_group_size" {
   value = module.autoscaling.autoscaling_group_max_size
 }
@@ -390,6 +433,21 @@ output "s3_bucket_name" {
   value = module.s3-bucket.s3_bucket_bucket_domain_name
 }
 
+output "data-bucket-arn" {
+  value = data.aws_s3_bucket.data_bucket.arn
+}
+
+output "data-bucket-domain-name" {
+  value = data.aws_s3_bucket.data_bucket.bucket_domain_name
+}
+
+output "data-bucket-region" {
+  value = "The ${data.aws_s3_bucket.data_bucket.id} bucket is located in ${data.aws_s3_bucket.data_bucket.region}"
+}
+
+output "data-bucket-website-domain" {
+  value = data.aws_s3_bucket.data_bucket.website_domain
+}
 /*
 # Create VPC Using Modules from Terraform Public Registry
 module "vpc" {
