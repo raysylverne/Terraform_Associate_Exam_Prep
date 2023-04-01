@@ -49,23 +49,28 @@ locals {
 locals {
   # Common tags to be assigned to all resources
   common_tags = {
-    Name      = local.server_name
-    Owner     = local.team
-    App       = local.application
-    Service   = local.service_name
-    AppTeam   = local.app_team
-    CreatedBy = local.createdby
+    Name      = lower(local.server_name)
+    Owner     = lower(local.team)
+    App       = lower(local.application)
+    Service   = lower(local.service_name)
+    AppTeam   = lower(local.app_team)
+    CreatedBy = lower(local.createdby)
   }
 }
 
+locals {
+  maximum = max(var.num_1, var.num_2, var.num_3)
+  minimum = min(var.num_1, var.num_2, var.num_3, 44, 20)
+}
+
 #Define the VPC 
-resource "aws_vpc" "demo_vpc" {
+resource "aws_vpc" "vpc" {
   cidr_block = var.vpc_cidr
 
   tags = {
-    Name        = var.vpc_name
-    Environment = "demo_environment"
-    Terraform   = "true"
+    Name        = upper(var.vpc_name)
+    Environment = upper(var.environment)
+    Terraform   = upper("true")
     Region      = data.aws_region.current.name
   }
 }
@@ -73,7 +78,7 @@ resource "aws_vpc" "demo_vpc" {
 #Deploy the private subnets
 resource "aws_subnet" "private_subnets" {
   for_each          = var.private_subnets
-  vpc_id            = aws_vpc.demo_vpc.id
+  vpc_id            = aws_vpc.vpc.id
   cidr_block        = cidrsubnet(var.vpc_cidr, 8, each.value)
   availability_zone = tolist(data.aws_availability_zones.available.names)[each.value]
 
@@ -86,7 +91,7 @@ resource "aws_subnet" "private_subnets" {
 #Deploy the public subnets
 resource "aws_subnet" "public_subnets" {
   for_each                = var.public_subnets
-  vpc_id                  = aws_vpc.demo_vpc.id
+  vpc_id                  = aws_vpc.vpc.id
   cidr_block              = cidrsubnet(var.vpc_cidr, 8, each.value + 100)
   availability_zone       = tolist(data.aws_availability_zones.available.names)[each.value]
   map_public_ip_on_launch = true
@@ -99,7 +104,7 @@ resource "aws_subnet" "public_subnets" {
 
 #Create route tables for public and private subnets
 resource "aws_route_table" "public_route_table" {
-  vpc_id = aws_vpc.demo_vpc.id
+  vpc_id = aws_vpc.vpc.id
 
   route {
     cidr_block = "0.0.0.0/0"
@@ -113,7 +118,7 @@ resource "aws_route_table" "public_route_table" {
 }
 
 resource "aws_route_table" "private_route_table" {
-  vpc_id = aws_vpc.demo_vpc.id
+  vpc_id = aws_vpc.vpc.id
 
   route {
     cidr_block = "0.0.0.0/0"
@@ -143,7 +148,7 @@ resource "aws_route_table_association" "private" {
 
 #Create Internet Gateway
 resource "aws_internet_gateway" "internet_gateway" {
-  vpc_id = aws_vpc.demo_vpc.id
+  vpc_id = aws_vpc.vpc.id
   tags = {
     Name = "demo_igw"
   }
@@ -241,7 +246,7 @@ resource "aws_instance" "ubuntu_server" {
 }
 
 resource "aws_subnet" "variables-subnet" {
-  vpc_id                  = aws_vpc.demo_vpc.id
+  vpc_id                  = aws_vpc.vpc.id
   cidr_block              = var.variables_sub_cidr
   availability_zone       = var.variables_sub_az
   map_public_ip_on_launch = var.variables_sub_auto_ip
@@ -276,7 +281,7 @@ resource "aws_key_pair" "generated" {
 # Security Group that allows SSH access
 resource "aws_security_group" "ingress-ssh" {
   name   = "allow-all-ssh"
-  vpc_id = aws_vpc.demo_vpc.id
+  vpc_id = aws_vpc.vpc.id
   ingress {
     cidr_blocks = [
       "0.0.0.0/0"
@@ -297,7 +302,7 @@ resource "aws_security_group" "ingress-ssh" {
 #  Security Group that allows web traffic over the standard HTTP and HTTPS ports.
 resource "aws_security_group" "vpc-web" {
   name        = "vpc-web-${terraform.workspace}"
-  vpc_id      = aws_vpc.demo_vpc.id
+  vpc_id      = aws_vpc.vpc.id
   description = "Web Traffic"
   ingress {
     description = "Allow Port 80"
@@ -324,7 +329,7 @@ resource "aws_security_group" "vpc-web" {
 
 resource "aws_security_group" "vpc-ping" {
   name        = "vpc-ping"
-  vpc_id      = aws_vpc.demo_vpc.id
+  vpc_id      = aws_vpc.vpc.id
   description = "ICMP for Ping Access"
   ingress {
     description = "Allow ICMP Traffic"
@@ -401,7 +406,7 @@ module "autoscaling" {
 # ref list & map varible blocks var.ip & var.us-east-1-azs[0] to create subnet resource
 resource "aws_subnet" "list_subnet" {
   for_each          = var.ip #  Iterate over a map to create multiple resources
-  vpc_id            = aws_vpc.demo_vpc.id
+  vpc_id            = aws_vpc.vpc.id
   cidr_block        = each.value
   availability_zone = var.us-east-1-azs[0]
 }
@@ -410,7 +415,7 @@ resource "aws_subnet" "list_subnet" {
 # better option than ⬆️ is to ref a complex map varible where all the info is group together into on block
 resource "aws_subnet" "list_subnet" {
   for_each          = var.env #  Iterate over a map to create multiple resources
-  vpc_id            = aws_vpc.demo_vpc.id
+  vpc_id            = aws_vpc.vpc.id
   cidr_block        = each.value.ip # now that we have a map within a map our interation needs to go on layer deep buy adding (.ip) 
   availability_zone = each.value.az # same as above 
 }
@@ -448,6 +453,93 @@ output "data-bucket-region" {
 output "data-bucket-website-domain" {
   value = data.aws_s3_bucket.data_bucket.website_domain
 }
+
+output "max_value" {
+  value = local.maximum
+}
+output "min_value" {
+  value = local.minimum
+}
+
+# create SG WITHOUT using Dynamic Block
+/*resource "aws_security_group" "main" {
+  name   = "core-sg"
+  vpc_id = aws_vpc.vpc.id
+  ingress {
+    description = "Port 443"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    description = "Port 80"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+*/
+
+
+# create SG WITH Dynamic Block referencing local Block 
+/*
+locals {
+  ingress_rules = [{
+    port        = 443
+    description = "Port 443"
+    },
+    {
+      port        = 80
+      description = "Port 80"
+    }
+  ]
+}
+
+# create SG WITH Dynamic Block referencing local Block 
+resource "aws_security_group" "main" {
+  name   = "core-sg"
+  vpc_id = aws_vpc.vpc.id
+
+  dynamic "ingress" {
+    for_each = local.ingress_rules
+    content {
+      description = ingress.value.description
+      from_port   = ingress.value.port
+      to_port     = ingress.value.port
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+  }
+}
+*/
+
+# create SG WITH Dynamic Block referencing variable web_ingress  
+resource "aws_security_group" "main" {
+  name   = "core-sg"
+  vpc_id = aws_vpc.vpc.id
+
+  dynamic "ingress" {
+    for_each = var.web_ingress
+    content {
+      description = ingress.value.description
+      from_port   = ingress.value.port
+      to_port     = ingress.value.port
+      protocol    = ingress.value.protocol
+      cidr_blocks = ingress.value.cidr_blocks
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
 /*
 # Create VPC Using Modules from Terraform Public Registry
 module "vpc" {
