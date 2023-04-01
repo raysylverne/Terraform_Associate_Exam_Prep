@@ -64,16 +64,17 @@ locals {
 }
 
 #Define the VPC 
+
 resource "aws_vpc" "vpc" {
   cidr_block = var.vpc_cidr
-
   tags = {
-    Name        = upper(var.vpc_name)
-    Environment = upper(var.environment)
-    Terraform   = upper("true")
-    Region      = data.aws_region.current.name
+    Name        = var.vpc_name
+    Environment = var.environment
+    Terraform   = "true"
   }
+  enable_dns_hostnames = true
 }
+
 
 #Deploy the private subnets
 resource "aws_subnet" "private_subnets" {
@@ -270,7 +271,7 @@ resource "local_file" "private_key_pem" {
 
 #  Create a key pair in AWS that is associated with ⬆ generated key
 resource "aws_key_pair" "generated" {
-  key_name   = "MyAWSKey"
+  key_name   = "MyAWSKey${var.environment}"
   public_key = tls_private_key.generated.public_key_openssh
 
   lifecycle {
@@ -559,3 +560,4 @@ module "vpc" {
   }
 }
 */
+
