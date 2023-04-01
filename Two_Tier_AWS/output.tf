@@ -10,7 +10,7 @@ output "hello-world" {
 # into other modules with resource that need to be attached to the VPC
 output "vpc_id" {
   description = "Output the ID for the primary VPC"
-  value       = aws_vpc.demo_vpc.id
+  value       = aws_vpc.vpc.id
 }
 
 output "public_url" {
@@ -20,8 +20,8 @@ output "public_url" {
 
 output "vpc_information" {
   description = "VPC Information about Environment"
-  value = "Your ${aws_vpc.demo_vpc.tags.Environment} VPC has an ID of ${aws_vpc
-  .demo_vpc.id}"
+  value = "Your ${aws_vpc.vpc.tags.Environment} VPC has an ID of ${aws_vpc
+  .vpc.id}"
 }
 
 output "public_ip" {
