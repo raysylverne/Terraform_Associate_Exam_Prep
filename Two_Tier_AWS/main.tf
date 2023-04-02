@@ -396,8 +396,8 @@ module "autoscaling" {
     aws_subnet.private_subnets["private_subnet_2"].id,
   aws_subnet.private_subnets["private_subnet_3"].id]
   min_size         = 0
-  max_size         = 2
-  desired_capacity = 1
+  max_size         = 0
+  desired_capacity = 0
   # Launch template
   image_id      = data.aws_ami.ubuntu.id
   instance_type = "t3.micro"
