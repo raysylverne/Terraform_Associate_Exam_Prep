@@ -7,28 +7,79 @@ provider "aws" {
 data "aws_availability_zones" "available" {}
 data "aws_region" "current" {}
 
+# query data from a bucket in AWS that is not managed by TF
+data "aws_s3_bucket" "data_bucket" {
+  bucket = "mystaticwebsite-rjs"
+}
+
+# creaet an IAM policy for bucket. Use string interprelation to ref Bucket ⬆️
+resource "aws_iam_policy" "policy" {
+  name        = "data_bucket_policy"
+  description = "Allow access to my bucket"
+  policy = jsonencode({
+    "Version" : "2012-10-17",
+    "Statement" : [
+      {
+        "Effect" : "Allow",
+        "Action" : [
+          "s3:Get*",
+          "s3:List*"
+        ],
+        "Resource" : "${data.aws_s3_bucket.data_bucket.arn}"
+      }
+    ]
+  })
+}
+
+# Create local values in a configuration block
+# that will be used to Interpolate local values into existing code
 locals {
   team        = "api_mgmt_dev"
-  applicatoin = "corp_api"
+  application = "corp_api"
   server_name = "ec2-${var.environment}-api-${var.variables_sub_az}"
 }
 
-#Define the VPC 
-resource "aws_vpc" "demo_vpc" {
-  cidr_block = var.vpc_cidr
+# these will be added as tags for aws_instance.ubuntu_server
+locals {
+  service_name = "Automation"
+  app_team     = "Cloud Team"
+  createdby    = "terraform"
+}
 
-  tags = {
-    Name        = var.vpc_name
-    Environment = "demo_environment"
-    Terraform   = "true"
-    Region      = data.aws_region.current.name
+locals {
+  # Common tags to be assigned to all resources
+  common_tags = {
+    Name      = lower(local.server_name)
+    Owner     = lower(local.team)
+    App       = lower(local.application)
+    Service   = lower(local.service_name)
+    AppTeam   = lower(local.app_team)
+    CreatedBy = lower(local.createdby)
   }
 }
+
+locals {
+  maximum = max(var.num_1, var.num_2, var.num_3)
+  minimum = min(var.num_1, var.num_2, var.num_3, 44, 20)
+}
+
+#Define the VPC 
+
+resource "aws_vpc" "vpc" {
+  cidr_block = var.vpc_cidr
+  tags = {
+    Name        = var.vpc_name
+    Environment = var.environment
+    Terraform   = "true"
+  }
+  enable_dns_hostnames = true
+}
+
 
 #Deploy the private subnets
 resource "aws_subnet" "private_subnets" {
   for_each          = var.private_subnets
-  vpc_id            = aws_vpc.demo_vpc.id
+  vpc_id            = aws_vpc.vpc.id
   cidr_block        = cidrsubnet(var.vpc_cidr, 8, each.value)
   availability_zone = tolist(data.aws_availability_zones.available.names)[each.value]
 
@@ -41,7 +92,7 @@ resource "aws_subnet" "private_subnets" {
 #Deploy the public subnets
 resource "aws_subnet" "public_subnets" {
   for_each                = var.public_subnets
-  vpc_id                  = aws_vpc.demo_vpc.id
+  vpc_id                  = aws_vpc.vpc.id
   cidr_block              = cidrsubnet(var.vpc_cidr, 8, each.value + 100)
   availability_zone       = tolist(data.aws_availability_zones.available.names)[each.value]
   map_public_ip_on_launch = true
@@ -54,7 +105,7 @@ resource "aws_subnet" "public_subnets" {
 
 #Create route tables for public and private subnets
 resource "aws_route_table" "public_route_table" {
-  vpc_id = aws_vpc.demo_vpc.id
+  vpc_id = aws_vpc.vpc.id
 
   route {
     cidr_block = "0.0.0.0/0"
@@ -68,7 +119,7 @@ resource "aws_route_table" "public_route_table" {
 }
 
 resource "aws_route_table" "private_route_table" {
-  vpc_id = aws_vpc.demo_vpc.id
+  vpc_id = aws_vpc.vpc.id
 
   route {
     cidr_block = "0.0.0.0/0"
@@ -98,7 +149,7 @@ resource "aws_route_table_association" "private" {
 
 #Create Internet Gateway
 resource "aws_internet_gateway" "internet_gateway" {
-  vpc_id = aws_vpc.demo_vpc.id
+  vpc_id = aws_vpc.vpc.id
   tags = {
     Name = "demo_igw"
   }
@@ -147,15 +198,6 @@ resource "aws_instance" "web_server" {                            # BLOCK
   }
 }
 
-resource "aws_instance" "web_server_2" {                          # BLOCK
-  ami           = data.aws_ami.ubuntu.id                          # Argument with data expression
-  instance_type = "t2.micro"                                      # Argument
-  subnet_id     = aws_subnet.public_subnets["public_subnet_1"].id # Argument with value as expression
-  tags = {
-    Name = "Web EC2 Server 2"
-  }
-}
-
 # Terraform Resource Block - To Build EC2 instance in Public Subnet
 resource "aws_instance" "ubuntu_server" {
   ami                         = data.aws_ami.ubuntu.id
@@ -170,9 +212,10 @@ resource "aws_instance" "ubuntu_server" {
     host        = self.public_ip
 
     # Leave the first part of the block unchanged and create our `local-exec` provisioner
-    provisioner "local-exec" {
+    /*provisioner "local-exec" {
       command = "chmod 600 ${local_file.private_key_pem.filename}"
     }
+    */
 
     # Create a remote-exec provisioner block to pull down web application
     provisioner "remote-exec" {
@@ -183,16 +226,28 @@ resource "aws_instance" "ubuntu_server" {
       ]
     }
   }
+
+  /*
+  # Interpolate local values into your existing code
   tags = {
-    Name = "Ubuntu EC2 Server"
+    Name        = "Ubuntu EC2 Server"
+    "Service"   = local.service_name
+    "AppTeam"   = local.app_team
+    "CreatedBy" = local.createdby
   }
+*/
+
+  # Instead of naming each tag individually you can place them all into one block
+  # and ref as a group. Now in the future instead of updating each resource manually you 
+  # only need to update the local block being ref
+  tags = local.common_tags
   lifecycle {
     ignore_changes = [security_groups]
   }
 }
 
 resource "aws_subnet" "variables-subnet" {
-  vpc_id                  = aws_vpc.demo_vpc.id
+  vpc_id                  = aws_vpc.vpc.id
   cidr_block              = var.variables_sub_cidr
   availability_zone       = var.variables_sub_az
   map_public_ip_on_launch = var.variables_sub_auto_ip
@@ -207,16 +262,16 @@ resource "tls_private_key" "generated" {
   algorithm = "RSA"
 }
 
-
+/*
 resource "local_file" "private_key_pem" {
   content  = tls_private_key.generated.private_key_pem
   filename = "MyASWKey.pem"
-
 }
+*/
 
 #  Create a key pair in AWS that is associated with ⬆ generated key
 resource "aws_key_pair" "generated" {
-  key_name   = "MyAWSKey"
+  key_name   = "MyAWSKey${var.environment}"
   public_key = tls_private_key.generated.public_key_openssh
 
   lifecycle {
@@ -227,7 +282,7 @@ resource "aws_key_pair" "generated" {
 # Security Group that allows SSH access
 resource "aws_security_group" "ingress-ssh" {
   name   = "allow-all-ssh"
-  vpc_id = aws_vpc.demo_vpc.id
+  vpc_id = aws_vpc.vpc.id
   ingress {
     cidr_blocks = [
       "0.0.0.0/0"
@@ -248,7 +303,7 @@ resource "aws_security_group" "ingress-ssh" {
 #  Security Group that allows web traffic over the standard HTTP and HTTPS ports.
 resource "aws_security_group" "vpc-web" {
   name        = "vpc-web-${terraform.workspace}"
-  vpc_id      = aws_vpc.demo_vpc.id
+  vpc_id      = aws_vpc.vpc.id
   description = "Web Traffic"
   ingress {
     description = "Allow Port 80"
@@ -275,7 +330,7 @@ resource "aws_security_group" "vpc-web" {
 
 resource "aws_security_group" "vpc-ping" {
   name        = "vpc-ping"
-  vpc_id      = aws_vpc.demo_vpc.id
+  vpc_id      = aws_vpc.vpc.id
   description = "ICMP for Ping Access"
   ingress {
     description = "Allow ICMP Traffic"
@@ -293,6 +348,7 @@ resource "aws_security_group" "vpc-ping" {
   }
 }
 
+/*
 module "web_server_module" {
   source    = "./modules/server"
   ami       = data.aws_ami.ubuntu.id
@@ -328,6 +384,7 @@ output "public_dns" {
 output "size" {
   value = module.web_server_module.size
 }
+*/
 
 # Create Resources Using Modules from GitHub Repo
 module "autoscaling" {
@@ -344,6 +401,24 @@ module "autoscaling" {
   # Launch template
   image_id      = data.aws_ami.ubuntu.id
   instance_type = "t3.micro"
+}
+
+/*
+# ref list & map varible blocks var.ip & var.us-east-1-azs[0] to create subnet resource
+resource "aws_subnet" "list_subnet" {
+  for_each          = var.ip #  Iterate over a map to create multiple resources
+  vpc_id            = aws_vpc.vpc.id
+  cidr_block        = each.value
+  availability_zone = var.us-east-1-azs[0]
+}
+*/
+
+# better option than ⬆️ is to ref a complex map varible where all the info is group together into on block
+resource "aws_subnet" "list_subnet" {
+  for_each          = var.env #  Iterate over a map to create multiple resources
+  vpc_id            = aws_vpc.vpc.id
+  cidr_block        = each.value.ip # now that we have a map within a map our interation needs to go on layer deep buy adding (.ip) 
+  availability_zone = each.value.az # same as above 
 }
 
 output "asg_group_size" {
@@ -364,6 +439,108 @@ output "s3_bucket_name" {
   value = module.s3-bucket.s3_bucket_bucket_domain_name
 }
 
+output "data-bucket-arn" {
+  value = data.aws_s3_bucket.data_bucket.arn
+}
+
+output "data-bucket-domain-name" {
+  value = data.aws_s3_bucket.data_bucket.bucket_domain_name
+}
+
+output "data-bucket-region" {
+  value = "The ${data.aws_s3_bucket.data_bucket.id} bucket is located in ${data.aws_s3_bucket.data_bucket.region}"
+}
+
+output "data-bucket-website-domain" {
+  value = data.aws_s3_bucket.data_bucket.website_domain
+}
+
+output "max_value" {
+  value = local.maximum
+}
+output "min_value" {
+  value = local.minimum
+}
+
+# create SG WITHOUT using Dynamic Block
+/*resource "aws_security_group" "main" {
+  name   = "core-sg"
+  vpc_id = aws_vpc.vpc.id
+  ingress {
+    description = "Port 443"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    description = "Port 80"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+*/
+
+
+# create SG WITH Dynamic Block referencing local Block 
+/*
+locals {
+  ingress_rules = [{
+    port        = 443
+    description = "Port 443"
+    },
+    {
+      port        = 80
+      description = "Port 80"
+    }
+  ]
+}
+
+# create SG WITH Dynamic Block referencing local Block 
+resource "aws_security_group" "main" {
+  name   = "core-sg"
+  vpc_id = aws_vpc.vpc.id
+
+  dynamic "ingress" {
+    for_each = local.ingress_rules
+    content {
+      description = ingress.value.description
+      from_port   = ingress.value.port
+      to_port     = ingress.value.port
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+  }
+}
+*/
+
+# create SG WITH Dynamic Block referencing variable web_ingress  
+resource "aws_security_group" "main" {
+  name   = "core-sg"
+  vpc_id = aws_vpc.vpc.id
+
+  dynamic "ingress" {
+    for_each = var.web_ingress
+    content {
+      description = ingress.value.description
+      from_port   = ingress.value.port
+      to_port     = ingress.value.port
+      protocol    = ingress.value.protocol
+      cidr_blocks = ingress.value.cidr_blocks
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
 /*
 # Create VPC Using Modules from Terraform Public Registry
 module "vpc" {
@@ -383,3 +560,4 @@ module "vpc" {
   }
 }
 */
+

@@ -9,7 +9,7 @@ terraform {
     workspaces {
       name = "udemy-tf-aws"
     }
-   
+
   # setup S3 for Backend Remote State 
   backend "s3" {
     bucket = "terrraform-raysylverne"
@@ -19,8 +19,7 @@ terraform {
     dynamodb_table = "terraform-lock"
     encrypt        = true
   }
-   */
-
+*/
   required_version = ">= 1.0"
   required_providers {
     aws = {
